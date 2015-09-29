@@ -15,7 +15,6 @@
 FROM mrbobbytables/mesos-base:1.0.0
 MAINTAINER Bob Killen / killen.bob@gmail.com / @mrbobbytables
 
-FROM mrbobbytables/mesos-base
 
 ENV VERSION_JENKINS=1.609.3        \
     JENKINS_HOME=/var/lib/jenkins  \
