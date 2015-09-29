@@ -1,8 +1,8 @@
 ################################################################################
-# jenkins:1.0.0
-# Date: 9/27/2015
+# jenkins:1.1.0
+# Date: 9/29/2015
 # Jenkins Version: 1.609.3 (LTS Release)
-# Mesos Version: 0.23.0-1.0
+# Mesos Version: 0.24.1-0.2.35.ubuntu1404
 #
 # Description:
 # Jenkins CI/CD container. Packages can be added by appending them to the
@@ -12,7 +12,7 @@
 # plugin available.
 ################################################################################
 
-FROM mrbobbytables/mesos-base:1.0.0
+FROM mrbobbytables/mesos-base:1.1.0
 MAINTAINER Bob Killen / killen.bob@gmail.com / @mrbobbytables
 
 
