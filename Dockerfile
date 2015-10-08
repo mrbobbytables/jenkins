@@ -1,6 +1,6 @@
 ################################################################################
-# jenkins:1.0.0
-# Date: 9/27/2015
+# jenkins:1.0.1
+# Date: 10/7/2015
 # Jenkins Version: 1.609.3 (LTS Release)
 # Mesos Version: 0.23.0-1.0
 #
@@ -12,7 +12,7 @@
 # plugin available.
 ################################################################################
 
-FROM mrbobbytables/mesos-base:1.0.0
+FROM mrbobbytables/mesos-base:1.0.1
 MAINTAINER Bob Killen / killen.bob@gmail.com / @mrbobbytables
 
 
