@@ -1,8 +1,8 @@
 ################################################################################
-# jenkins:1.0.1
-# Date: 10/7/2015
+# jenkins:1.0.2
+# Date: 10/16/2015
 # Jenkins Version: 1.609.3 (LTS Release)
-# Mesos Version: 0.23.0-1.0
+# Mesos Version: 0.23.1-0.2.61.ubuntu1404
 #
 # Description:
 # Jenkins CI/CD container. Packages can be added by appending them to the
