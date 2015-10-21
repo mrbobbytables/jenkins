@@ -7,13 +7,18 @@
         "type": "DOCKER",
         "docker": {
             "image": "registry.address/mesos/jenkins",
-            "network": "HOST"
+            "network": "BRIDGE",
+            "portMappings": [
+              { "containerPort": 31111, "hostPort": 31111, "protocol": "tcp" },
+              { "containerPort": 31112, "hostPort": 31112, "protocol": "tcp" },
+              { "containerPort": 31113, "hostPort": 31113, "protocol": "tcp" }
+            ]
         }
     },
     "env": {
       "ENVIRONMENT": "production",
-      "JAVA_OPTS": "-Xmx1024mb",
-      "LIBPROCESS_PORT": "9400",
+      "ENVIRONMENT_INIT": "/opt/scripts/marathon_env_init.sh",
+      "JAVA_OPTS": "-Xmx1024m",
       "JENKINS_LOG_FILE_THRESHOLD": "WARNING",
       "JENKINS_LOG_STDOUT_THRESHOLD": "WARNING",
       "JENKINS_MESOS_AUTOCONF": "enabled",

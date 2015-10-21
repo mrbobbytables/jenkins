@@ -34,6 +34,7 @@ COPY ./skel /
 # sleep 1 to get around 'text file busy' error.
 RUN chmod +x ./init.sh                                   \
  && chmod +x /opt/scripts/fetch-jenkins-plugins.sh       \
+ && chmod +x /opt/scripts/marathon_env_init.sh           \
  && cp -R /usr/share/jenkins/ref/* /var/lib/jenkins      \
  && sleep 1                                              \
  && /opt/scripts/fetch-jenkins-plugins.sh $PLUGIN_DEFS   \
