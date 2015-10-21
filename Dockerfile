@@ -1,6 +1,6 @@
 ################################################################################
 # jenkins:1.1.0
-# Date: 9/29/2015
+# Date: 10/21/2015
 # Jenkins Version: 1.609.3 (LTS Release)
 # Mesos Version: 0.24.1-0.2.35.ubuntu1404
 #
@@ -12,11 +12,13 @@
 # plugin available.
 ################################################################################
 
+<<<<<<< HEAD
 FROM mrbobbytables/mesos-base:1.1.0
+
 MAINTAINER Bob Killen / killen.bob@gmail.com / @mrbobbytables
 
 
-ENV VERSION_JENKINS=1.609.3        \
+ENV VERSION_JENKINS=1.625.1        \
     JENKINS_HOME=/var/lib/jenkins  \
     PLUGIN_DEFS=/opt/scripts/plugins.def
 

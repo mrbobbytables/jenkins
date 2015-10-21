@@ -6,8 +6,8 @@ An Ubuntu based container built for running a Jenkins Continuous Integration ser
 ##### Version Information:
 
 * **Container Release:** 1.1.0
-* **Mesos:** 0.24.1
-* **Jenkins:**  1.609.3
+* **Mesos:** 0.24.1-0.2.35.ubuntu1404
+* **Jenkins:**  1.625.1
 * **Jenkins Mesos Plugin:** 0.8.0
 
 
@@ -50,7 +50,7 @@ For a production deployment, a bit more should be considered. Namely, storing th
 
 The script method is ideal to use in conjuction with something along the lines of the [SCM Sync Configuration Plugin](https://wiki.jenkins-ci.org/display/JENKINS/SCM+Sync+configuration+plugin) that will allow you to save your configs in git or svn.
 
-Other than that, the only true minimum requirements for getting going in a production setting is to specify `ENVRIONMENT` as `production`, and set `JENKINS_JNLP_PORT` if you do not wish to use the default `8090`.   All other Jenkins related settings should be tuned to your environment. For further information regarding how to pass other Jenkins settings, please see the [Jenkins service](#jenkins) section.
+Other than that, the only true minimum requirements for getting going in a production setting is to specify `ENVIRONMENT` as `production`, and set `JENKINS_JNLP_PORT` if you do not wish to use the default `8090`.   All other Jenkins related settings should be tuned to your environment. For further information regarding how to pass other Jenkins settings, please see the [Jenkins service](#jenkins) section.
 
 
 
@@ -133,16 +133,16 @@ jenkins
 ### Modification and Anatomy of the Project
 
 **File Structure**
-The directory `skel` in the project root maps to the root of the filesystem once the container is built. Files and folders placed there will map to their corrisponding location within the container.
+The directory `skel` in the project root maps to the root of the file system once the container is built. Files and folders placed there will map to their corresponding location within the container.
 
 **Init**
-The init script (`./init.sh`) found at the root of the directory is the entry process for the container. It's role is to simply set specific environment variables and modify any subsiquently required configuration files.
+The init script (`./init.sh`) found at the root of the directory is the entry process for the container. It's role is to simply set specific environment variables and modify any subsequently required configuration files.
 
 **Jenkins**
 Jenkins configs are stored in two locations. An 'initial seed' of configs stored in `/usr/share/jenkins/ref` are then copied to their final location in `/var/lib/jenkins`.
 
 **Supervisord**
-All supervisord configs can be found in `/etc/supervisor/conf.d/`. Services by default will redirect their stdout to `/dev/fd/1` and stderr to `/dev/fd/2` allowing for service's console output to be displayed. Most applications can log to both stdout and their respecively specified log file.
+All supervisord configs can be found in `/etc/supervisor/conf.d/`. Services by default will redirect their stdout to `/dev/fd/1` and stderr to `/dev/fd/2` allowing for service's console output to be displayed. Most applications can log to both stdout and their respectively specified log file.
 
 In some cases (such as with zookeeper), it is possible to specify different logging levels and formats for each location.
 
@@ -252,7 +252,7 @@ Below is the minimum list of variables to be aware of when deploying the Jenkins
 
 #### Jenkins Command Line Parameters
 
-Any of the Jenkins commandline argument may be passed as an environment variable. The init script will pick up on anything prefixed with `JENKINS_` and assume it is to be interrpretted as a jenkins command line paramter. In addition to starting with the prefix, an `_` should be used between any instance where there would be any word change or use of a capital letter. e.g. `--httpListenAddress` would become `JENKINS_HTTP_LISTEN_ADDRESS`. For an accurate list of available options; execute the following: `docker run --rm jenkins java -jar /usr/share/jenkins/jenkins.war --help`.
+Any of the Jenkins commandline argument may be passed as an environment variable. The init script will pick up on anything prefixed with `JENKINS_` and assume it is to be interpreted as a jenkins command line parameter. In addition to starting with the prefix, an `_` should be used between any instance where there would be any word change or use of a capital letter. e.g. `--httpListenAddress` would become `JENKINS_HTTP_LISTEN_ADDRESS`. For an accurate list of available options; execute the following: `docker run --rm jenkins java -jar /usr/share/jenkins/jenkins.war --help`.
 
 **Note:** There are a few exclusions to the above rule, these are things that the script itself interprets or expects to have an groovy init script handle. These options include: `JENKINS_ARGS`, `JENKINS_HOME`, `JENKINS_JNLP`, `JENKINS_LOG_FILE_*`, `JENKINS_LOG_STDOUT_*`, and `JENKINS_MESOS`.
 
@@ -310,7 +310,7 @@ If you take the container as is, and only supply the Mesos settings; then any jo
 
 
 ##### Variables with '###' in their name
-Multiple Mesos slave images may be definied. Settings for them are grouped together based on the first `###` in the variable name. e.g. `JENKINS_MESOS_SLAVE_1_LABEL=mesos` and `JENKINS_MESOS_SLAVE_1_DOCK_IMG=jenkins-build-base` will apply to the same configuration. In instances where there is a `###` at the end of the variable name, multiple instances of that variable may be supplied. e.g. `JENKINS_MESOS_SLAVE_2_VOL_1=/usr/bin/docker::/usr/bin/docker:ro` and `JENKINS_MESOS_SLAVE_2_VOL_2=/var/run/docker.sock::/var/run/docker.sock::rw` will be two volumes mounted to the same container.
+Multiple Mesos slave images may be defined. Settings for them are grouped together based on the first `###` in the variable name. e.g. `JENKINS_MESOS_SLAVE_1_LABEL=mesos` and `JENKINS_MESOS_SLAVE_1_DOCK_IMG=jenkins-build-base` will apply to the same configuration. In instances where there is a `###` at the end of the variable name, multiple instances of that variable may be supplied. e.g. `JENKINS_MESOS_SLAVE_2_VOL_1=/usr/bin/docker::/usr/bin/docker:ro` and `JENKINS_MESOS_SLAVE_2_VOL_2=/var/run/docker.sock::/var/run/docker.sock::rw` will be two volumes mounted to the same container.
 
 **Note:** Add/Modify applies to variable availability either when adding a new Mesos Cloud or Modifying one in place.
 
@@ -490,7 +490,7 @@ Redpill - Supervisor status monitor. Terminates the supervisor process if any sp
 
 -c | --cleanup    Optional path to cleanup script that should be executed upon exit.
 -h | --help       This help text.
--i | --inerval    Optional interval at which the service check is performed in seconds. (Default: 30)
+-i | --interval   Optional interval at which the service check is performed in seconds. (Default: 30)
 -s | --service    A comma delimited list of the supervisor service names that should be monitored.
 ```
 
@@ -500,3 +500,6 @@ Redpill - Supervisor status monitor. Terminates the supervisor process if any sp
 ### Troubleshooting
 
 In the event of an issue, the `ENVIRONMENT` variable can be set to `debug`.  This will stop the container from shipping logs and prevent it from terminating if one of the services enters a failed state. It will also default the logging level for both stdout and the file to `DEBUG`.
+
+
+
