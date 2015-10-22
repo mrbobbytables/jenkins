@@ -1,7 +1,7 @@
 ################################################################################
 # jenkins:1.1.0
 # Date: 10/21/2015
-# Jenkins Version: 1.609.3 (LTS Release)
+# Jenkins Version: 1.625.1 (LTS Release)
 # Mesos Version: 0.24.1-0.2.35.ubuntu1404
 #
 # Description:
