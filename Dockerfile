@@ -1,8 +1,8 @@
 ################################################################################
-# jenkins:1.0.2
-# Date: 10/16/2015
-# Jenkins Version: 1.609.3 (LTS Release)
-# Mesos Version: 0.23.1-0.2.61.ubuntu1404
+# jenkins:1.1.0
+# Date: 10/21/2015
+# Jenkins Version: 1.625.1 (LTS Release)
+# Mesos Version: 0.24.1-0.2.35.ubuntu1404
 #
 # Description:
 # Jenkins CI/CD container. Packages can be added by appending them to the
@@ -12,11 +12,12 @@
 # plugin available.
 ################################################################################
 
-FROM mrbobbytables/mesos-base:1.0.1
+FROM mrbobbytables/mesos-base:1.1.0
+
 MAINTAINER Bob Killen / killen.bob@gmail.com / @mrbobbytables
 
 
-ENV VERSION_JENKINS=1.609.3        \
+ENV VERSION_JENKINS=1.625.1        \
     JENKINS_HOME=/var/lib/jenkins  \
     PLUGIN_DEFS=/opt/scripts/plugins.def
 
@@ -33,6 +34,7 @@ COPY ./skel /
 # sleep 1 to get around 'text file busy' error.
 RUN chmod +x ./init.sh                                   \
  && chmod +x /opt/scripts/fetch-jenkins-plugins.sh       \
+ && chmod +x /opt/scripts/marathon_env_init.sh           \
  && cp -R /usr/share/jenkins/ref/* /var/lib/jenkins      \
  && sleep 1                                              \
  && /opt/scripts/fetch-jenkins-plugins.sh $PLUGIN_DEFS   \

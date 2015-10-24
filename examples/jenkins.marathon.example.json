@@ -7,26 +7,53 @@
         "type": "DOCKER",
         "docker": {
             "image": "registry.address/mesos/jenkins",
-            "network": "HOST"
+            "network": "BRIDGE",
+            "portMappings": [
+                {
+                    "containerPort": 31111,
+                    "hostPort": 31111,
+                    "protocol": "tcp"
+                },
+                {
+                    "containerPort": 31112,
+                    "hostPort": 31112,
+                    "protocol": "tcp"
+                },
+                {
+                    "containerPort": 31113,
+                    "hostPort": 31113,
+                    "protocol": "tcp"
+                }
+            ]
         }
     },
     "env": {
-      "ENVIRONMENT": "production",
-      "JAVA_OPTS": "-Xmx1024mb",
-      "LIBPROCESS_PORT": "9400",
-      "JENKINS_LOG_FILE_THRESHOLD": "WARNING",
-      "JENKINS_LOG_STDOUT_THRESHOLD": "WARNING",
-      "JENKINS_MESOS_AUTOCONF": "enabled",
-      "JENKINS_MESOS_MASTER": "zk://10.10.0.11:2181,10.10.0.12:2181,10.10.0.13:2181/mesos",
-      "JENKINS_MESOS_SLAVE_1_LABEL": "mesos-docker",
-      "JENKINS_MESOS_SLAVE_1_DOCK_IMG": "jenkins-build-base",
-      "JENKINS_MESOS_SLAVE_1_VOL_1": "/usr/bin/docker::/usr/bin/docker::ro",
-      "JENKINS_MESOS_SLAVE_1_VOL_2": "/var/run/docker.sock::/var/run/docker.sock::rw",
-      "JENKINS_MESOS_SLAVE_1_ADD_URIS_1": "file:///docker.tar.gz::false::false",
-      "JENKINS_MESOS_SLAVE_2_LABEL": "mesos",
-      "JENKINS_MESOS_SLAVE_2_DOCK_IMG": "jenkins-build-base"
+        "ENVIRONMENT": "production",
+        "ENVIRONMENT_INIT": "/opt/scripts/marathon_env_init.sh",
+        "JAVA_OPTS": "-Xmx1024m",
+        "JENKINS_LOG_FILE_THRESHOLD": "WARNING",
+        "JENKINS_LOG_STDOUT_THRESHOLD": "WARNING",
+        "JENKINS_MESOS_AUTOCONF": "enabled",
+        "JENKINS_MESOS_MASTER": "zk://10.10.0.11:2181,10.10.0.12:2181,10.10.0.13:2181/mesos",
+        "JENKINS_MESOS_SLAVE_1_LABEL": "mesos-docker",
+        "JENKINS_MESOS_SLAVE_1_DOCK_IMG": "jenkins-build-base",
+        "JENKINS_MESOS_SLAVE_1_VOL_1": "/usr/bin/docker::/usr/bin/docker::ro",
+        "JENKINS_MESOS_SLAVE_1_VOL_2": "/var/run/docker.sock::/var/run/docker.sock::rw",
+        "JENKINS_MESOS_SLAVE_1_ADD_URIS_1": "file:///docker.tar.gz::false::false",
+        "JENKINS_MESOS_SLAVE_2_LABEL": "mesos",
+        "JENKINS_MESOS_SLAVE_2_DOCK_IMG": "jenkins-build-base"
     },
+    "healthChecks": [
+        {
+            "protocol": "HTTP",
+            "portIndex": 0,
+            "path": "/",
+            "gracePeriodSeconds": 30,
+            "intervalSeconds": 20,
+            "maxConsecutiveFailures": 3
+        }
+    ],
     "uris": [
-      "file:///docker.tar.gz"
+        "file:///docker.tar.gz"
     ]
 }

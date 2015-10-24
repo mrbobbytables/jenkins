@@ -5,9 +5,9 @@ An Ubuntu based container built for running a Jenkins Continuous Integration ser
 
 ##### Version Information:
 
-* **Container Release:** 1.0.2
-* **Mesos:** 0.23.1-0.2.61.ubuntu1404
-* **Jenkins:**  1.609.3
+* **Container Release:** 1.1.0
+* **Mesos:** 0.24.1-0.2.35.ubuntu1404
+* **Jenkins:**  1.625.1
 * **Jenkins Mesos Plugin:** 0.8.0
 
 
@@ -50,12 +50,27 @@ For a production deployment, a bit more should be considered. Namely, storing th
 
 The script method is ideal to use in conjuction with something along the lines of the [SCM Sync Configuration Plugin](https://wiki.jenkins-ci.org/display/JENKINS/SCM+Sync+configuration+plugin) that will allow you to save your configs in git or svn.
 
-Other than that, the only true minimum requirements for getting going in a production setting is to specify `ENVRIONMENT` as `production`, and set `JENKINS_JNLP_PORT` if you do not wish to use the default `8090`.   All other Jenkins related settings should be tuned to your environment. For further information regarding how to pass other Jenkins settings, please see the [Jenkins service](#jenkins) section.
+Other than that, the only true minimum requirements for getting going in a production setting is to specify `ENVIRONMENT` as `production`, and set `JENKINS_JNLP_PORT` if you do not wish to use the default `8090`.   All other Jenkins related settings should be tuned to your environment. For further information regarding how to pass other Jenkins settings, please see the [Jenkins service](#jenkins) section.
 
 
 
 #### Mesos Integration
-To run Jenkins with Mesos integration, the container **MUST** be run with host networking and `LIBPROCESS_PORT` should be set to a different port than what was used for the mesos-slave itself or any other frameworks that might be scheduled on the same host (default port is `9000`).
+To run Jenkins with Mesos integration, the container requires several other environment variables to defined. This can be done either at startup and passing them manually with a normal run command, or seeding them via a script and passing it through with the `ENVIRONMENT_INIT` variable (done when launching via marathon).
+
+* `LIBPROCESS_IP` - The ip in which libprocess will bind to. (defaults to `0.0.0.0`)
+
+* `LIBPROCESS_PORT` - The port used for libprocess communication (defaults to `9000`)
+
+* `LIBPROCESS_ADVERTISE_IP` - If set, this will be the 'advertised' or 'externalized' ip used for libprocess communication. Relevant when running an application that uses libprocess within a container, and should be set to the host IP in which you wish to use for Mesos communication.
+
+* `LIBPROCESS_ADVERTISE_PORT` - If set, this will be the 'advertised' or 'externalized' port used for libprocess communication. Relevant when running an application that uses libprocess within a container, and should be set to the host port you wish to use for Mesos communication.
+
+A supplied sample seed script is available at `/opt/scripts/marathon_env_init.sh`. This will assign 1 to 1 mappings of the 3 exposed ports needed for Jenkins + Mesos to their associated variables.
+
+* `PORT0` - The Jenkins WebUI
+* `PORT1` - The Jenkins JNLP Port
+* `PORT3` - port used for both `LIBPROCESS_PORT` and `LIBPROCESS_ADVERTISED_PORT`.
+
 
 To enable Jenkins-Mesos Autoconfiguration set `JENKINS_MESOS_AUTOCONF` to `enabled`. This will trigger a Jenkins init groovy script to disable any executors on the master and will either add a **NEW** cloud to the Jenkins server, or modify a few specific variables of every Mesos Cluster already defined. It **CANNOT** discern between different Mesos clusters.
 
@@ -66,23 +81,28 @@ For a full list of available options and their descriptions, please see the [Jen
 ##### Example Run Command
 
 ```
-#!/bin/bash
-docker run -d --net=host \
--e ENVIRONMENT=production \
+docker run -d              \
+--name jenkins             \
+-e ENVIRONMENT=production  \
 -e PARENT_HOST=$(hostname) \
--e JAVA_OPTS="-Xmx1024mb" \
--e LIBPROCESS_PORT=9400 \
--e JENKINS_LOG_FILE_THRESHOLD=WARNING \
+-e JAVA_OPTS="-Xmx1024m"   \
+-e LIBPROCESS_PORT=9400    \
+-e LIBPROCESS_ADVERTISE_PORT=9400       \
+-e LIBPROCESS_ADVERTISE_IP=10.10.0.101  \
+-e JENKINS_LOG_FILE_THRESHOLD=WARNING   \
 -e JENKINS_LOG_STDOUT_THRESHOLD=WARNING \
--e JENKINS_MESOS_AUTOCONF=enabled \
--e JENKINS_MESOS_MASTER=zk://10.10.0.11:2181,10.10.0.12:2181,10.10.0.13:2181/mesos \
--e JENKINS_MESOS_SLAVE_1_LABEL=mesos \
--e JENKINS_MESOS_SLAVE_1_DOCK_IMG=jenkins-build-base \
--e JENKINS_MESOS_SLAVE_2_LABEL=mesos-docker \
--e JENKINS_MESOS_SLAVE_2_DOCK_IMG=jenkins-build-base \
--e JENKINS_MESOS_SLAVE_2_VOL_1=/usr/bin/docker::/usr/bin/docker::ro \
--e JENKINS_MESOS_SLAVE_2_VOL_2=/var/run/docker.sock::/var/run/docker.sock::rw \
--e JENKINS_MESOS_SLAVE_2_ADD_URIS_1=file:///docker.tar.gz::false::false \
+-e JENKINS_MESOS_AUTOCONF=enabled       \
+-e JENKINS_MESOS_MASTER="zk://10.10.0.11:2181,10.10.0.12:2181,10.10.0.13:2181/mesos"  \
+-e JENKINS_MESOS_SLAVE_1_LABEL=mesos-docker                                           \
+-e JENKINS_MESOS_SLAVE_1_DOCK_IMG=jenkins-build-base                                  \
+-e JENKINS_MESOS_SLAVE_1_VOL_1=/usr/bin/docker::/usr/bin/docker::ro                   \
+-e JENKINS_MESOS_SLAVE_1_VOL_2=/var/run/docker.sock::/var/run/docker.sock::rw         \
+-e JENKINS_MESOS_SLAVE_1_ADD_URIS_1=file:///docker.tar.gz::false::false               \
+-e JENKINS_MESOS_SLAVE_2_LABEL=mesos                  \
+-e JENKINS_MESOS_SLAVE_2_DOCK_IMG=jenkins-build-base  \
+-p 8080:8080  \
+-p 8090:8090  \
+-p 9400:9400  \
 jenkins
 ```
 
@@ -98,13 +118,30 @@ jenkins
         "type": "DOCKER",
         "docker": {
             "image": "registry.address/mesos/jenkins",
-            "network": "HOST"
+            "network": "BRIDGE",
+            "portMappings": [
+                {
+                    "containerPort": 31111,
+                    "hostPort": 31111,
+                    "protocol": "tcp"
+                },
+                {
+                    "containerPort": 31112,
+                    "hostPort": 31112,
+                    "protocol": "tcp"
+                },
+                {
+                    "containerPort": 31113,
+                    "hostPort": 31113,
+                    "protocol": "tcp"
+                }
+            ]
         }
     },
     "env": {
         "ENVIRONMENT": "production",
-        "JAVA_OPTS": "-Xmx1024mb",
-        "LIBPROCESS_PORT": "9400",
+        "ENVIRONMENT_INIT": "/opt/scripts/marathon_env_init.sh",
+        "JAVA_OPTS": "-Xmx1024m",
         "JENKINS_LOG_FILE_THRESHOLD": "WARNING",
         "JENKINS_LOG_STDOUT_THRESHOLD": "WARNING",
         "JENKINS_MESOS_AUTOCONF": "enabled",
@@ -117,6 +154,16 @@ jenkins
         "JENKINS_MESOS_SLAVE_2_LABEL": "mesos",
         "JENKINS_MESOS_SLAVE_2_DOCK_IMG": "jenkins-build-base"
     },
+    "healthChecks": [
+        {
+            "protocol": "HTTP",
+            "portIndex": 0,
+            "path": "/",
+            "gracePeriodSeconds": 30,
+            "intervalSeconds": 20,
+            "maxConsecutiveFailures": 3
+        }
+    ],
     "uris": [
         "file:///docker.tar.gz"
     ]
@@ -126,6 +173,37 @@ jenkins
 * **Note:** The example assumes a v1.6+ version of docker or a v2 version of the docker registry. For information on using an older version or connecting to a v1 registry, please see the [private registry](https://mesosphere.github.io/marathon/docs/native-docker-private-registry.html) section of the Marathon documentation.
 
 
+##### Example ENVIRONMENT_INIT script
+
+```
+#!/bin/bash
+
+##### Sample environment init script #####
+# PORT0 = Jenkins HTTP Web Port
+# PORT1 = Jenkins JNLP Port
+# PORT2 = libprocess bind port
+##########################################
+
+
+export JENKINS_HTTP_PORT="$PORT0"
+export JENKINS_JNLP_PORT="$PORT1"
+
+local local_ip="$(ip addr show eth0 | grep -m 1 -P -o '(?<=inet )[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}')"
+
+export LIBPROCESS_IP="$local_ip"
+export LIBPROCESS_PORT="$PORT2"
+export LIBPROCESS_ADVERTISE_IP="$HOST"
+export LIBPROCESS_ADVERTISE_PORT="$PORT2"
+
+
+echo "[$(date)][env-init][JENKINS_HTTP_PORT] $PORT0"
+echo "[$(date)][env-init][JENKINS_JNLP_PORT] $PORT1"
+echo "[$(date)][env-init][LIBPROCESS_IP] $local_ip"
+echo "[$(date)][env-init][LIBPROCESS_PORT] $PORT2"
+echo "[$(date)][env-init][LIBPROCESS_ADVERTISE_IP] $HOST"
+echo "[$(date)][env-init][LIBPROCESS_ADVERTISE_PORT] $PORT2"
+```
+
 ---
 ---
 
@@ -133,21 +211,21 @@ jenkins
 ### Modification and Anatomy of the Project
 
 **File Structure**
-The directory `skel` in the project root maps to the root of the filesystem once the container is built. Files and folders placed there will map to their corrisponding location within the container.
+The directory `skel` in the project root maps to the root of the file system once the container is built. Files and folders placed there will map to their corresponding location within the container.
 
 **Init**
-The init script (`./init.sh`) found at the root of the directory is the entry process for the container. It's role is to simply set specific environment variables and modify any subsiquently required configuration files.
+The init script (`./init.sh`) found at the root of the directory is the entry process for the container. It's role is to simply set specific environment variables and modify any subsequently required configuration files.
 
 **Jenkins**
 Jenkins configs are stored in two locations. An 'initial seed' of configs stored in `/usr/share/jenkins/ref` are then copied to their final location in `/var/lib/jenkins`.
 
 **Supervisord**
-All supervisord configs can be found in `/etc/supervisor/conf.d/`. Services by default will redirect their stdout to `/dev/fd/1` and stderr to `/dev/fd/2` allowing for service's console output to be displayed. Most applications can log to both stdout and their respecively specified log file.
+All supervisord configs can be found in `/etc/supervisor/conf.d/`. Services by default will redirect their stdout to `/dev/fd/1` and stderr to `/dev/fd/2` allowing for service's console output to be displayed. Most applications can log to both stdout and their respectively specified log file.
 
 In some cases (such as with zookeeper), it is possible to specify different logging levels and formats for each location.
 
 **Logstash-Forwarder**
-The Logstash-Forwarder binary and default configuration file can be found in `/skel/opt/logstash-forwarder`. It is ideal to bake the Logstash Server certificate into the base container at this location. If the certificate is called `logstash-forwarder.crt`, the default supplied Logstash-Forwarder config should not need to be modified, and the server setting may be passed through the `SERICE_LOGSTASH_FORWARDER_ADDRESS` environment variable.
+The Logstash-Forwarder binary and default configuration file can be found in `/skel/opt/logstash-forwarder`. It is ideal to bake the Logstash Server certificate into the base container at this location. If the certificate is called `logstash-forwarder.crt`, the default supplied Logstash-Forwarder config should not need to be modified, and the server setting may be passed through the `SERVICE_LOGSTASH_FORWARDER_ADDRESS` environment variable.
 
 In practice, the supplied Logstash-Forwarder config should be used as an example to produce one tailored to each deployment.
 
@@ -166,8 +244,10 @@ Below is the minimum list of variables to be aware of when deploying the Jenkins
 | `APP_NAME`                        | `jenkins`                                               |
 | `ENVIRONMENT`                     | `local`                                                 |
 | `PARENT_HOST`                     | `unknown`                                               |
-| `LIBPROCESS_IP`                   |                                                         |
+| `LIBPROCESS_IP`                   |  `0.0.0.0`                                              |
 | `LIBPROCESS_PORT`                 | `9000`                                                  |
+| `LIBPROCESS_ADVERTISE_IP`         |                                                         |
+| `LIBPROCESS_ADVERTISE_PORT`       |                                                         |
 | `JAVA_OPTS`                       |                                                         |
 | `JENKINS_HTTP_LISTEN_ADDRESS`     | `0.0.0.0`                                               |
 | `JENKINS_HTTP_PORT`               | `8080`                                                  |
@@ -188,11 +268,15 @@ Below is the minimum list of variables to be aware of when deploying the Jenkins
 
 * `ENVIRONMENT` - Sets defaults for several other variables based on the current running environment. Please see the [environment](#environment) section for further information. If logstash-forwarder is enabled, this value will populate the `environment` field in the logstash-forwarder configuration file.
 
-* `PARENT_HOST` - The name of the parent host. If `HOST` is found as an environmet variable, and `PARENT_HOST` is not set. Init will automatically set `PARENT_HOST` equal to host (this would be the case by default in marathon). If Logstash-Forwarder is enabled, this will populate the `parent_host` field in the Logstash-Forwarder configuration file.
+* `PARENT_HOST` - The name of the parent host. If `HOST` is found as an environment variable, and `PARENT_HOST` is not set. Init will automatically set `PARENT_HOST` equal to host (this would be the case by default in marathon). If Logstash-Forwarder is enabled, this will populate the `parent_host` field in the Logstash-Forwarder configuration file.
 
-* `LIBPROCESS_IP` - The IP used to communicate with Mesos.
+* `LIBPROCESS_IP` - The ip in which libprocess will bind to.
 
-* `LIBPROCESS_PORT` - The port that will be used for communicating with Mesos.
+* `LIBPROCESS_PORT` - The port used for libprocess communication.
+
+* `LIBPROCESS_ADVERTISE_IP` - If set, this will be the 'advertised' or 'externalized' ip used for libprocess communication. Relevant when running an application that uses libprocess within a container, and should be set to the host IP in which you wish to use for Mesos communication.
+
+* `LIBPROCESS_ADVERTISE_PORT` - If set, this will be the 'advertised' or 'externalized' port used for libprocess communication. Relevant when running an application that uses libprocess within a container, and should be set to the host port you wish to use for Mesos communication.
 
 * `JAVA_OPTS` - The Java environment variables that will be passed to Jenkins at runtime. Generally used for adjusting memory allocation (`-Xms` and `-Xmx`).
 
@@ -252,7 +336,7 @@ Below is the minimum list of variables to be aware of when deploying the Jenkins
 
 #### Jenkins Command Line Parameters
 
-Any of the Jenkins commandline argument may be passed as an environment variable. The init script will pick up on anything prefixed with `JENKINS_` and assume it is to be interrpretted as a jenkins command line paramter. In addition to starting with the prefix, an `_` should be used between any instance where there would be any word change or use of a capital letter. e.g. `--httpListenAddress` would become `JENKINS_HTTP_LISTEN_ADDRESS`. For an accurate list of available options; execute the following: `docker run --rm jenkins java -jar /usr/share/jenkins/jenkins.war --help`.
+Any of the Jenkins commandline argument may be passed as an environment variable. The init script will pick up on anything prefixed with `JENKINS_` and assume it is to be interpreted as a jenkins command line parameter. In addition to starting with the prefix, an `_` should be used between any instance where there would be any word change or use of a capital letter. e.g. `--httpListenAddress` would become `JENKINS_HTTP_LISTEN_ADDRESS`. For an accurate list of available options; execute the following: `docker run --rm jenkins java -jar /usr/share/jenkins/jenkins.war --help`.
 
 **Note:** There are a few exclusions to the above rule, these are things that the script itself interprets or expects to have an groovy init script handle. These options include: `JENKINS_ARGS`, `JENKINS_HOME`, `JENKINS_JNLP`, `JENKINS_LOG_FILE_*`, `JENKINS_LOG_STDOUT_*`, and `JENKINS_MESOS`.
 
@@ -310,7 +394,7 @@ If you take the container as is, and only supply the Mesos settings; then any jo
 
 
 ##### Variables with '###' in their name
-Multiple Mesos slave images may be definied. Settings for them are grouped together based on the first `###` in the variable name. e.g. `JENKINS_MESOS_SLAVE_1_LABEL=mesos` and `JENKINS_MESOS_SLAVE_1_DOCK_IMG=jenkins-build-base` will apply to the same configuration. In instances where there is a `###` at the end of the variable name, multiple instances of that variable may be supplied. e.g. `JENKINS_MESOS_SLAVE_2_VOL_1=/usr/bin/docker::/usr/bin/docker:ro` and `JENKINS_MESOS_SLAVE_2_VOL_2=/var/run/docker.sock::/var/run/docker.sock::rw` will be two volumes mounted to the same container.
+Multiple Mesos slave images may be defined. Settings for them are grouped together based on the first `###` in the variable name. e.g. `JENKINS_MESOS_SLAVE_1_LABEL=mesos` and `JENKINS_MESOS_SLAVE_1_DOCK_IMG=jenkins-build-base` will apply to the same configuration. In instances where there is a `###` at the end of the variable name, multiple instances of that variable may be supplied. e.g. `JENKINS_MESOS_SLAVE_2_VOL_1=/usr/bin/docker::/usr/bin/docker:ro` and `JENKINS_MESOS_SLAVE_2_VOL_2=/var/run/docker.sock::/var/run/docker.sock::rw` will be two volumes mounted to the same container.
 
 **Note:** Add/Modify applies to variable availability either when adding a new Mesos Cloud or Modifying one in place.
 
@@ -490,7 +574,7 @@ Redpill - Supervisor status monitor. Terminates the supervisor process if any sp
 
 -c | --cleanup    Optional path to cleanup script that should be executed upon exit.
 -h | --help       This help text.
--i | --inerval    Optional interval at which the service check is performed in seconds. (Default: 30)
+-i | --interval   Optional interval at which the service check is performed in seconds. (Default: 30)
 -s | --service    A comma delimited list of the supervisor service names that should be monitored.
 ```
 
@@ -500,3 +584,14 @@ Redpill - Supervisor status monitor. Terminates the supervisor process if any sp
 ### Troubleshooting
 
 In the event of an issue, the `ENVIRONMENT` variable can be set to `debug`.  This will stop the container from shipping logs and prevent it from terminating if one of the services enters a failed state. It will also default the logging level for both stdout and the file to `DEBUG`.
+
+
+**Container refuses to start when scheduling via Marathon**
+Check the `stderr` log through the mesos master. If there is an error along the lines of `Failed to initialize, bind: Address already in use`. Do not attempt to pass libprocess related environment variables at run time in this fashion. Instead use an `ENVIRONMENT_INIT` script to seed them for you.
+
+
+
+
+
+
+

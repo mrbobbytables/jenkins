@@ -1,3 +1,9 @@
+2015-10-21 - 1.1.0:
+ - Bump Mesos version to 0.24.1
+ - Bump Jenkins LTS to 1.625.1
+ - Add env_init.sh
+ - Update docs and examples to use LIBPROCESS_ADVERTISE_*
+
 2015-10-16 - 1.0.2:
   - Bump to Mesos 0.23.1-0.2.61.ubuntu1404
 
