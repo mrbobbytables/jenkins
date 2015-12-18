@@ -5,9 +5,9 @@ An Ubuntu based container built for running a Jenkins Continuous Integration ser
 
 ##### Version Information:
 
-* **Container Release:** 1.1.1
-* **Mesos:** 0.24.1-0.2.35.ubuntu1404
-* **Jenkins:**  1.625.2
+* **Container Release:** 1.1.2
+* **Mesos:** 0.25.0-0.2.70.ubuntu1404
+* **Jenkins:**  1.625.3
 * **Jenkins Mesos Plugin:** 0.8.0
 
 
