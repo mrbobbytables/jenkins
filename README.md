@@ -5,14 +5,14 @@ An Ubuntu based container built for running a Jenkins Continuous Integration ser
 
 ##### Version Information:
 
-* **Container Release:** 1.1.1
-* **Mesos:** 0.24.1-0.2.35.ubuntu1404
-* **Jenkins:**  1.625.2
+* **Container Release:** 1.1.2
+* **Mesos:** 0.25.0-0.2.70.ubuntu1404
+* **Jenkins:**  1.625.3
 * **Jenkins Mesos Plugin:** 0.8.0
 
 
 ##### Services Include:
-* **[Jenkis](#jenkins)** - A well known java based Continuous Integration / Continuous Deployment service.
+* **[Jenkins](#jenkins)** - A well known java based Continuous Integration / Continuous Deployment service.
 * **[Logstash-Forwarder](#logstash-forwarder)** - A lightweight log collector and shipper for use with [Logstash](https://www.elastic.co/products/logstash).
 * **[Redpill](#redpill)** - A bash script and healthcheck for supervisord managed services. It is capable of running cleanup scripts that should be executed upon container termination.
 
@@ -80,7 +80,7 @@ For a full list of available options and their descriptions, please see the [Jen
 
 ##### Example Run Command
 
-```
+```bash
 docker run -d              \
 --name jenkins             \
 -e ENVIRONMENT=production  \
@@ -108,7 +108,7 @@ jenkins
 
 ##### Example Marathon App Definition
 
-```
+```json
 {
     "id": "/jenkins",
     "instances": 1,
@@ -175,7 +175,7 @@ jenkins
 
 ##### Example ENVIRONMENT_INIT script
 
-```
+```bash
 #!/bin/bash
 
 ##### Sample environment init script #####
