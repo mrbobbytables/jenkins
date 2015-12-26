@@ -7,11 +7,15 @@
 ##########################################
 
 
-export JENKINS_HTTP_PORT="$PORT0"
-export JENKINS_JNLP_PORT="$PORT1"
 
 local local_ip="$(ip addr show eth0 | grep -m 1 -P -o '(?<=inet )[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}')"
 
+chown -R jenkins:jenkins "$JENKINS_HOME"
+chown -R jenkins:jenkins /usr/share/jenkins
+chown -R jenkins:jenkins /var/log/jenkins
+
+export JENKINS_HTTP_PORT="$PORT0"
+export JENKINS_JNLP_PORT="$PORT1"
 export LIBPROCESS_IP="$local_ip"
 export LIBPROCESS_PORT="$PORT2"
 export LIBPROCESS_ADVERTISE_IP="$HOST"
