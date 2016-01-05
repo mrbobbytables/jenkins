@@ -185,12 +185,19 @@ jenkins
 ##########################################
 
 
+#seed $JENKINS_HOME
+cp -Ru /usr/share/jenkins/ref/* "$JENKINS_HOME"
 
-local local_ip="$(ip addr show eth0 | grep -m 1 -P -o '(?<=inet )[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}')"
+if [[ ! -d "$JENKINS_HOME/plugins" ]]; then
+  /opt/scripts/fetch-jenkins-plugins.sh "$PLUGIN_DEFS"
+fi
 
 chown -R jenkins:jenkins "$JENKINS_HOME"
 chown -R jenkins:jenkins /usr/share/jenkins
 chown -R jenkins:jenkins /var/log/jenkins
+
+
+local_ip="$(ip addr show eth0 | grep -m 1 -P -o '(?<=inet )[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}')"
 
 export JENKINS_HTTP_PORT="$PORT0"
 export JENKINS_JNLP_PORT="$PORT1"
