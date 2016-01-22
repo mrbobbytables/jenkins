@@ -1,3 +1,9 @@
+2016-01-22 - 1.2.0:
+ - Use new Ubuntu base image.
+ - Consul template and envconsul support added
+ - Bump Jenkins LTS to 1.642.1
+ - Bump Jenkins Mesos plugin to v0.9.0
+
 2015-12-21 - 1.1.3:
  - Bump Mesos version to 0.26
 
