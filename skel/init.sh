@@ -23,6 +23,11 @@ init_vars() {
   export JENKINS_HTTP_PORT=${JENKINS_HTTP_PORT:-8080}
   export JENKINS_JNLP_PORT=${JENKINS_JNLP_PORT:-8090}
 
+  # if consul template is to be used, configure rsyslog
+  export SERVICE_CONSUL_TEMPLATE=${SERVICE_CONSUL_TEMPLATE:-disabled}
+  if [[ "$SERVICE_CONSUL_TEMPLATE" == "enabled" ]]; then
+    export SERVICE_RSYSLOG=${SERVICE_RSYSLOG:-enabled}
+  fi
 
   export SERVICE_LOGSTASH_FORWARDER_CONF=${SERVICE_LOGSTASH_FORWARDER_CONF:-/opt/logstash-forwarder/jenkins.conf}
   export SERVICE_REDPILL_MONITOR=${SERVICE_REDPILL_MONITOR:-jenkins}
@@ -40,6 +45,9 @@ init_vars() {
       export JENKINS_LOG_FILE_THRESHOLD=${JENKINS_LOG_FILE_THRESHOLD:-FINEST}
       export SERVICE_LOGSTASH_FORWARDER=${SERVICE_LOGSTASH_FORWARDER:-disabled}
       export SERVICE_REDPILL=${SERVICE_REDPILL:-disabled}
+      if [[ "$SERVICE_CONSUL_TEMPLATE" == "enabled" ]]; then
+        export CONSUL_TEMPLATE_LOG_LEVEL=${CONSUL_TEMPLATE_LOG_LEVEL:-debug}
+      fi
     ;;
     local|*)
       export JAVA_OPTS=${JAVA_OPTS:-"-Xmx256m"}
@@ -89,8 +97,11 @@ main() {
   echo "[$(date)][App-Name] $APP_NAME"
   echo "[$(date)][Environment] $environment"
 
+  __config_service_consul_template
   __config_service_logstash_forwarder
   __config_service_redpill
+  __config_service_rsyslog
+
   config_jenkins
 
   echo "[$(date)][Jenkins][Start-Command] $SERVICE_JENKINS_CMD"
