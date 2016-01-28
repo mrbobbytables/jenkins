@@ -5,16 +5,19 @@ An Ubuntu based container built for running a Jenkins Continuous Integration ser
 
 ##### Version Information:
 
-* **Container Release:** 1.1.3
+* **Container Release:** 1.2.0
 * **Mesos:** 0.26.0-0.2.145.ubuntu1404
-* **Jenkins:**  1.625.3
-* **Jenkins Mesos Plugin:** 0.8.0
+* **Jenkins:**  1.642.1
+* **Jenkins Mesos Plugin:** 0.9.0
 
 
 ##### Services Include:
 * **[Jenkins](#jenkins)** - A well known java based Continuous Integration / Continuous Deployment service.
+* **[Consul-Template](#consul-template)** - An application that can populate configs from a consul service.
+* **[Logrotate](#logrotate)** - A script and application that aid in pruning log files.
 * **[Logstash-Forwarder](#logstash-forwarder)** - A lightweight log collector and shipper for use with [Logstash](https://www.elastic.co/products/logstash).
 * **[Redpill](#redpill)** - A bash script and healthcheck for supervisord managed services. It is capable of running cleanup scripts that should be executed upon container termination.
+* **[Rsyslog](#rsyslog)** - The system logging daemon.
 
 
 ---
@@ -31,8 +34,11 @@ An Ubuntu based container built for running a Jenkins Continuous Integration ser
 * [Service Configuration](#service-configuration)
  * [Jenkins](#jenkins)
    * [Jenkins Mesos Configuration Options](#jenkins-mesos-autoconfiguration-options)
+ * [Consul-Template](#consul-template)
+ * [Logrotate](#logrotate)
  * [Logstash-Forwarder](#logstash-forwarder)
  * [Redpill](#redpill)
+ * [Rsyslog](#rsyslog)
 * [Troubleshooting](#troubleshooting)
 
 
@@ -170,8 +176,6 @@ jenkins
 }
 ```
 
-* **Note:** The example assumes a v1.6+ version of docker or a v2 version of the docker registry. For information on using an older version or connecting to a v1 registry, please see the [private registry](https://mesosphere.github.io/marathon/docs/native-docker-private-registry.html) section of the Marathon documentation.
-
 
 ##### Example ENVIRONMENT_INIT script
 
@@ -266,10 +270,13 @@ Below is the minimum list of variables to be aware of when deploying the Jenkins
 | `JENKINS_LOG_FILE_PATTERN`        | `/var/log/jenkins/jenkins.log`                          |
 | `JENKINS_LOG_FILE_THRESHOLD`      |                                                         |
 | `JENKINS_LOG_STDOUT_THRESHOLD`    |                                                         |
+| `SERVICE_CONSUL_TEMPLATE`         | `disabled`                                              |
+| `SERVICE_LOGROTATE`               | `disabled`                                              |
 | `SERVICE_LOGSTASH_FORWARDER`      |                                                         |
 | `SERVICE_LOGSTASH_FORWARDER_CONF` | `/opt/logstash-forwarer/jenkins.conf`                   |
 | `SERVICE_REDPILL`                 |                                                         |
 | `SERVICE_REDPILL_MONITOR`         | `jenkins`                                               |
+| `SERVICE_RSYSLOG`                 | `disabled`                                              |
 
 ##### Description
 
@@ -291,6 +298,10 @@ Below is the minimum list of variables to be aware of when deploying the Jenkins
 
 * `JAVA_OPTS` - The Java environment variables that will be passed to Jenkins at runtime. Generally used for adjusting memory allocation (`-Xms` and `-Xmx`).
 
+* `SERVICE_CONSUL_TEMPLATE - * `SERVICE_CONSUL_TEMPLATE` - Enables or disables the consul-template service. If enabled, it will also enable `SERVICE_LOGROTATE` and `SERVICE_RSYSLOG` to handle logging. (**Options:** `enabled` or `disabled`)
+
+* `SERVICE_LOGROTATE` - Enables or disabled the Logrotate service. This is managed by `SERVICE_CONSUL_TEMPLATE`, but can be enabled/disabled manually. (**Options:** `enabled` or `disabled`)
+
 * `SERVICE_LOGSTASH_FORWARDER` - Enables or disables the Logstash-Forwarder service. Set automatically depending on the `ENVIRONMENT`. See the Environment section below.  (**Options:** `enabled` or `disabled`)
 
 * `SERVICE_LOGSTASH_FORWARDER_CONF` - The path to the logstash-forwarder configuration.
@@ -298,6 +309,8 @@ Below is the minimum list of variables to be aware of when deploying the Jenkins
 * `SERVICE_REDPILL` - Enables or disables the Redpill service. Set automatically depending on the `ENVIRONMENT`. See the Environment section below.  (**Options:** `enabled` or `disabled`)
 
 * `SERVICE_REDPILL_MONITOR` - The name of the supervisord service(s) that the Redpill service check script should monitor.
+
+* `SERVICE_RSYSLOG` - Enables of disables the rsyslog service. This is managed by `SERVICE_CONSUL_TEMPLATE`, but can be enabled/disabled manually. (**Options:** `enabled` or `disabled`)
 
 ---
 
@@ -333,6 +346,9 @@ Below is the minimum list of variables to be aware of when deploying the Jenkins
 | `JENKINS_LOG_STDOUT_THRESHOLD` | `FINEST`    |
 | `SERVICE_LOGSTASH_FORWARDER`   | `disabled`  |
 | `SERVICE_REDPILL`              | `disabled`  |
+| `CONSUL_TEMPLATE_LOG_LEVEL`    | `debug` *   |
+
+\* Only set if `SERVICE_CONSUL_TEMPLATE` is set to `enabled`.
 
 
 ---
@@ -511,6 +527,79 @@ Multiple Mesos slave images may be defined. Settings for them are grouped togeth
 * `JENKINS_MESOS_SLAVE_###_ADD_URIS_###` - Any additional URI's to pass to the Jenkins slave container. Supplied in the form of `<uri>::<executable - true|false>::<extract true|false>`. **Note:** Ideal for docker registry credentials. 
 
 
+---
+
+
+### Consul-Template
+
+Provides initial configuration of consul-template. Variables prefixed with `CONSUL_TEMPLATE_` will automatically be passed to the consul-template service at runtime, e.g. `CONSUL_TEMPLATE_SSL_CA_CERT=/etc/consul/certs/ca.crt` becomes `-ssl-ca-cert="/etc/consul/certs/ca.crt"`. If managing the application configuration is handled via file configs, no other variables must be passed at runtime.
+
+#### Consul-Template Environment Variables
+
+##### Defaults
+
+| **Variable**                  | **Default**                           |
+|-------------------------------|---------------------------------------|
+| `CONSUL_TEMPLATE_CONFIG`      | `/etc/consul/template/conf.d`         |
+| `CONSUL_TEMPLATE_SYSLOG`      | `true`                                |
+| `SERVICE_CONSUL_TEMPLATE`     |                                       |
+| `SERVICE_CONSUL_TEMPLATE_CMD` | `consul-template <CONSUL_TEMPLATE_*>` |
+
+
+---
+
+
+### Logrotate
+
+The logrotate script is a small simple script that will either call and execute logrotate on a given interval; or execute a supplied script. This is useful for applications that do not perform their own log cleanup.
+
+#### Logrotate Environment Variables
+
+##### Defaults
+
+| **Variable**                 | **Default**                           |
+|------------------------------|---------------------------------------|
+| `SERVICE_LOGROTATE`          |                                       |
+| `SERVICE_LOGROTATE_INTERVAL` | `3600` (set in script)                |
+| `SERVICE_LOGROTATE_CONF`     | `/etc/logrotate.conf` (set in script) |
+| `SERVICE_LOGROTATE_SCRIPT`   |                                       |
+| `SERVICE_LOGROTATE_FORCE`    |                                       |
+| `SERVICE_LOGROTATE_VERBOSE`  |                                       |
+| `SERVICE_LOGROTATE_DEBUG`    |                                       |
+| `SERVICE_LOGROTATE_CMD`      | `/opt/script/logrotate.sh <flags>`    |
+
+##### Description
+
+* `SERVICE_LOGROTATE` - Enables or disables the Logrotate service. Set automatically depending on the `ENVIRONMENT`. See the Environment section.  (**Options:** `enabled` or `disabled`)
+
+* `SERVICE_LOGROTATE_INTERVAL` - The time in seconds between run of either the logrotate command or the provided logrotate script. Default is set to `3600` or 1 hour in the script itself.
+
+* `SERVICE_LOGROTATE_CONFIG` - The path to the logrotate config file. If neither config or script is provided, it will default to `/etc/logrotate.conf`.
+
+* `SERVICE_LOGROTATE_SCRIPT` - A script that should be executed on the provided interval. Useful to do cleanup of logs for applications that already handle rotation, or if additional processing is required.
+
+* `SERVICE_LOGROTATE_FORCE` - If present, passes the 'force' command to logrotate. Will be ignored if a script is provided.
+
+* `SERVICE_LOGROTATE_VERBOSE` - If present, passes the 'verbose' command to logrotate. Will be ignored if a script is provided.
+
+* `SERVICE_LOGROTATE_DEBUG` - If present, passed the 'debug' command to logrotate. Will be ignored if a script is provided.
+
+* `SERVICE_LOGROTATE_CMD` - The command that is passed to supervisor. If overriding, must be an escaped python string expression. Please see the [Supervisord Command Documentation](http://supervisord.org/configuration.html#program-x-section-settings) for further information.
+
+
+##### Logrotate Script Help Text
+```
+root@ec58ca7459cb:/opt/scripts# ./logrotate.sh --help
+logrotate.sh - Small wrapper script for logrotate.
+-i | --interval     The interval in seconds that logrotate should run.
+-c | --config       Path to the logrotate config.
+-s | --script       A script to be executed in place of logrotate.
+-f | --force        Forces log rotation.
+-v | --verbose      Display verbose output.
+-d | --debug        Enable debugging, and implies verbose output. No state file changes.
+-h | --help         This usage text.
+```
+
 
 ---
 
@@ -588,6 +677,30 @@ Redpill - Supervisor status monitor. Terminates the supervisor process if any sp
 -i | --interval   Optional interval at which the service check is performed in seconds. (Default: 30)
 -s | --service    A comma delimited list of the supervisor service names that should be monitored.
 ```
+
+
+---
+
+
+### Rsyslog
+Rsyslog is a high performance log processing daemon. For any modifications to the config, it is best to edit the rsyslog configs directly (`/etc/rsyslog.conf` and `/etc/rsyslog.d/*`).
+
+##### Defaults
+
+| **Variable**                      | **Default**                                      |
+|-----------------------------------|--------------------------------------------------|
+| `SERVICE_RSYSLOG`                 | `disabled`                                       |
+| `SERVICE_RSYSLOG_CONF`            | `/etc/rsyslog.conf`                              |
+| `SERVICE_RSYSLOG_CMD`             | `/usr/sbin/rsyslogd -n -f $SERVICE_RSYSLOG_CONF` |
+
+##### Description
+
+* `SERVICE_RSYSLOG` - Enables or disables the rsyslog service. This will automatically be set depending on what other services are enabled. (**Options:** `enabled` or `disabled`)
+
+* `SERVICE_RSYSLOG_CONF` - The path to the rsyslog configuration file.
+
+* `SERVICE_RSYSLOG_CMD` -  The command that is passed to supervisor. If overriding, must be an escaped python string expression. Please see the [Supervisord Command Documentation](http://supervisord.org/configuration.html#program-x-section-settings) for further information.
+
 
 ---
 ---
